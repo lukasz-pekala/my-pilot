@@ -72,10 +72,13 @@ function getWebviewContent(): string {
             }
             #question {
                 width: calc(100% - 22px);
+                height: 100px;
                 padding: 10px;
                 margin-bottom: 10px;
                 border: 1px solid #ccc;
                 border-radius: 4px;
+                resize: both;
+                overflow: auto;
             }
             #askBtn {
                 padding: 10px 20px;
@@ -89,6 +92,7 @@ function getWebviewContent(): string {
                 background-color: #005f99;
             }
             #answer {
+                color: #000;
                 margin-top: 20px;
                 padding: 10px;
                 background-color: #fff;
@@ -100,7 +104,7 @@ function getWebviewContent(): string {
     <body>
         <h1>My Pilot</h1>
         <h2>Ask AI about something</h2>
-        <input id="question" type="text" />
+        <textarea id="question"></textarea>
         <button id="askBtn">Ask</button>
         <div id="answer"></div>
         <script>
