@@ -246,9 +246,6 @@ function getWebviewContent(): string {
                         break;
                     case 'modelChanged':
                         document.getElementById('currentModelName').innerText = message.model.name;
-                        document.getElementById('currentModelDescription').innerText = message.model.description;
-                        document.getElementById('currentModelParameters').innerText = message.model.parameters;
-                        document.getElementById('currentModelContext').innerText = message.model.context;
                         break;
                 }
             });
