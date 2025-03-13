@@ -1,6 +1,6 @@
 {
-  "name": "createai",
-  "displayName": " createAI",
+  "name": "mypilot",
+  "displayName": "My Pilot",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -14,7 +14,7 @@
   "contributes": {
     "commands": [
       {
-        "command": "createai.helloWorld",
+        "command": "mypilot.helloWorld",
         "title": "Hello World"
       }
     ]
