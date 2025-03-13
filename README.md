@@ -1,6 +1,6 @@
-# createai README
+# mypilot README
 
-This is the README for your extension "createai". After writing up a brief description, we recommend including the following sections.
+This is the README for your extension "mypilot". After writing up a brief description, we recommend including the following sections.
 
 ## Features
 
@@ -24,8 +24,7 @@ For example:
 
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+* `mypilot.enable`: Enable/disable this extension.
 
 ## Known Issues
 
