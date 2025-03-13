@@ -198,6 +198,10 @@ function getWebviewContent(): string {
                     return;
                 }
 
+                const askButton = document.getElementById('askBtn');
+                askButton.disabled = true;
+                askButton.textContent = 'Processing...';
+
                 const message = {
                     command: 'chat',
                     text,
@@ -210,6 +214,8 @@ function getWebviewContent(): string {
                 switch (message.command) {
                     case 'chatResponse':
                         document.getElementById('answer').innerText = message.text;
+                        document.getElementById('askBtn').disabled = false;
+                        document.getElementById('askBtn').textContent = 'Ask AI';
                         break;
                 }
             });
