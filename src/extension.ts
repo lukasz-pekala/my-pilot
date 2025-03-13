@@ -14,10 +14,8 @@ const CURRENT_MODEL = {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Congratulations, your extension "My Pilot" is now active!');
-
   const disposable = vscode.commands.registerCommand(
-    "mypilot.openMyPilot", // Changed command name
+    "mypilot.openmypilot", // Changed command name
     () => {
       const panel = vscode.window.createWebviewPanel(
         "myPilot", // Identifies the type of the webview. Used internally

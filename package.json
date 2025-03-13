@@ -1,7 +1,7 @@
 {
   "name": "mypilot",
   "displayName": "My Pilot",
-  "description": "",
+  "description": "An AI assistant extension that integrates with local Ollama models",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.98.0"
@@ -15,7 +15,7 @@
     "commands": [
       {
         "command": "mypilot.openmypilot",
-        "title": "Open My Pilot"
+        "title": "My Pilot: Open Chat"
       }
     ]
   },
