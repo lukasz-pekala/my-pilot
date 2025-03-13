@@ -59,53 +59,76 @@ function getWebviewContent(): string {
         <title>My Pilot</title>
         <style>
             body {
-                font-family: Arial, sans-serif;
-                margin: 20px;
-                padding: 0;
-                background-color: #f4f4f4;
+                padding: 15px;
+                background-color: var(--vscode-editor-background);
+                color: var(--vscode-foreground);
+                font-family: var(--vscode-font-family);
+                font-size: var(--vscode-font-size);
+                line-height: 1.6;
             }
             h1 {
-                color: #333;
+                color: var(--vscode-foreground);
+                font-weight: normal;
+                border-bottom: 1px solid var(--vscode-panel-border);
+                padding-bottom: 5px;
             }
             h2 {
-                color: #666;
+                color: var(--vscode-foreground);
+                font-weight: normal;
+                font-size: 1.1em;
             }
             #question {
-                width: calc(100% - 22px);
-                height: 100px;
-                padding: 10px;
+                width: calc(100% - 20px);
+                min-height: 100px;
+                padding: 8px;
                 margin-bottom: 10px;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                resize: both;
-                overflow: auto;
+                background-color: var(--vscode-input-background);
+                color: var(--vscode-input-foreground);
+                border: 1px solid var(--vscode-input-border);
+                border-radius: 2px;
+                font-family: var(--vscode-editor-font-family);
+                resize: vertical;
+            }
+            #question:focus {
+                outline: 1px solid var(--vscode-focusBorder);
+                border-color: var(--vscode-focusBorder);
             }
             #askBtn {
-                padding: 10px 20px;
-                background-color: #007acc;
-                color: white;
+                padding: 8px 12px;
+                background-color: var(--vscode-button-background);
+                color: var(--vscode-button-foreground);
                 border: none;
-                border-radius: 4px;
+                border-radius: 2px;
                 cursor: pointer;
             }
             #askBtn:hover {
-                background-color: #005f99;
+                background-color: var(--vscode-button-hoverBackground);
             }
             #answer {
-                color: #000;
-                margin-top: 20px;
+                margin-top: 15px;
                 padding: 10px;
-                background-color: #fff;
-                border: 1px solid #ccc;
-                border-radius: 4px; /* Fixed missing semicolon */
+                background-color: var(--vscode-editor-background);
+                border: 1px solid var(--vscode-panel-border);
+                border-radius: 2px;
+                white-space: pre-wrap;
+                font-family: var(--vscode-editor-font-family);
+            }
+            ::-webkit-scrollbar {
+                width: 10px;
+            }
+            ::-webkit-scrollbar-track {
+                background: var(--vscode-scrollbarSlider-background);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--vscode-scrollbarSlider-hoverBackground);
             }
         </style>
     </head>
     <body>
         <h1>My Pilot</h1>
         <h2>Ask AI about something</h2>
-        <textarea id="question"></textarea>
-        <button id="askBtn">Ask</button>
+        <textarea id="question" placeholder="Type your question here..."></textarea>
+        <button id="askBtn">Ask AI</button>
         <div id="answer"></div>
         <script>
             const vscode = acquireVsCodeApi();
