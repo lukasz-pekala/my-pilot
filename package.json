@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "mypilot.helloWorld",
-        "title": "Hello World"
+        "command": "mypilot.openmypilot",
+        "title": "Open My Pilot"
       }
     ]
   },
