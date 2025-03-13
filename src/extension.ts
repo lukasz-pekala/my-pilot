@@ -2,27 +2,31 @@
 // Import the module and reference it with the alias vscode in your code below
 
 import * as vscode from "vscode";
-import ollama from 'ollama';
-
-const CURRENT_MODEL = {
-    name: 'deepseek-coder-v2:16b',
-    description: 'A large language model optimized for code generation and analysis',
-    parameters: '16B parameters',
-    context: '16K tokens'
-};
-
+import ollama, { ListResponse, ModelResponse } from 'ollama';
+let modelsList: ListResponse;
+let currentModel: ModelResponse;
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  
+
   const disposable = vscode.commands.registerCommand(
     "mypilot.openmypilot", // Changed command name
-    () => {
+    async () => {
       const panel = vscode.window.createWebviewPanel(
         "myPilot", // Identifies the type of the webview. Used internally
         "My Pilot",
         vscode.ViewColumn.One,
         { enableScripts: true }
       );
+
+      modelsList = await ollama.list();
+      if (modelsList.models.length === 0) {
+        vscode.window.showErrorMessage('No models found. Extension will not be activated. Please install at least one model using Ollama.');
+        return;
+      }
+
+      currentModel = modelsList.models[0];
 
       panel.webview.html = getWebviewContent();
 
@@ -31,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
           case "chat":
             try {
               const responseStream = await ollama.chat({
-                model: CURRENT_MODEL.name,
+                model: currentModel.name,
                 messages: [{ role: 'user', content: message.text }],
                 stream: true,
               });
@@ -45,6 +49,10 @@ export function activate(context: vscode.ExtensionContext) {
               console.error(error);
               panel.webview.postMessage({ command: 'chatResponse', text: 'An error occurred' });
             }
+            break;
+          case "changeModel":
+            currentModel = modelsList.models.find(model => model.name === message.modelName) || currentModel;
+            panel.webview.postMessage({ command: 'modelChanged', model: currentModel });
             break;
         }
       });
@@ -166,6 +174,22 @@ function getWebviewContent(): string {
                 font-size: 14px;
                 color: var(--vscode-descriptionForeground);
             }
+
+            #modelSelect {
+                width: 100%;
+                padding: 8px;
+                background-color: var(--vscode-input-background);
+                color: var(--vscode-input-foreground);
+                border: 1px solid var(--vscode-input-border);
+                border-radius: 2px;
+                font-family: var(--vscode-editor-font-family);
+                font-size: var(--vscode-font-size);
+                margin-bottom: 10px;
+            }
+            #modelSelect:focus {
+                outline: 1px solid var(--vscode-focusBorder);
+                border-color: var(--vscode-focusBorder);
+            }
         </style>
     </head>
     <body>
@@ -174,14 +198,14 @@ function getWebviewContent(): string {
         <div class="model-info">
             <h3>
                 <i class="codicon codicon-symbol-class"></i>
-                Current Model: ${CURRENT_MODEL.name}
+                Current Model: <span id="currentModelName">${currentModel.name}</span>
             </h3>
-            <p>${CURRENT_MODEL.description}</p>
-            <p>
-                <span class="model-tag">Parameters: ${CURRENT_MODEL.parameters}</span>
-                <span class="model-tag">Context: ${CURRENT_MODEL.context}</span>
-            </p>
         </div>
+
+        <h2>Change Model</h2>
+        <select id="modelSelect">
+          ${modelsList.models.map(model => `<option value="${model.name}">${model.name}</option>`).join('')}
+        </select>
 
         <h2>Ask AI about something</h2>
         <textarea id="question" placeholder="Type your question here..."></textarea>
@@ -189,6 +213,11 @@ function getWebviewContent(): string {
         <div id="answer"></div>
         <script>
             const vscode = acquireVsCodeApi();
+
+            document.getElementById('modelSelect').addEventListener('change', () => {
+                const modelName = document.getElementById('modelSelect').value;
+                vscode.postMessage({ command: 'changeModel', modelName });
+            });
 
             document.getElementById('askBtn').addEventListener('click', () => {
                 const text = document.getElementById('question').value;
@@ -214,6 +243,9 @@ function getWebviewContent(): string {
                         document.getElementById('answer').innerText = message.text;
                         document.getElementById('askBtn').disabled = false;
                         document.getElementById('askBtn').textContent = 'Ask AI';
+                        break;
+                    case 'modelChanged':
+                        document.getElementById('currentModelName').innerText = message.model.name;
                         break;
                 }
             });
