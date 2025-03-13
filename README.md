@@ -1,6 +1,6 @@
 # mypilot README
 
-This is the README for your extension "mypilot". After writing up a brief description, we recommend including the following sections.
+This is the README for your extension "mypilot", an AI assistant extension that integrates with locally running Ollama models.
 
 ## Features
 
@@ -14,13 +14,11 @@ For example if there is an image subfolder under your extension project workspac
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- VS Code 1.60.0 or higher
+- [Ollama](https://ollama.ai/) installed and running locally on your machine
+- At least one model pulled into your Ollama installation
 
 ## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
 
 This extension contributes the following settings:
 
