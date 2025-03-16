@@ -3,68 +3,58 @@
 
 import * as vscode from "vscode";
 import ollama, { ListResponse, ModelResponse } from 'ollama';
-let modelsList: ListResponse;
-let currentModel: ModelResponse;
+import { OllamaClient, DefaultOllamaClient } from './services/ollama-client';
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  const ollamaClient = new DefaultOllamaClient();
   
-
   const disposable = vscode.commands.registerCommand(
-    "mypilot.openmypilot", // Changed command name
+    "mypilot.openmypilot",
     async () => {
-      const panel = vscode.window.createWebviewPanel(
-        "myPilot", // Identifies the type of the webview. Used internally
-        "My Pilot",
-        vscode.ViewColumn.One,
-        { enableScripts: true }
-      );
-
-      modelsList = await ollama.list();
-      if (modelsList.models.length === 0) {
-        vscode.window.showErrorMessage('No models found. Extension will not be activated. Please install at least one model using Ollama.');
-        return;
-      }
-
-      currentModel = modelsList.models[0];
-
-      panel.webview.html = getWebviewContent();
-
-      panel.webview.onDidReceiveMessage(async (message) => {
-        switch (message.command) {
-          case "chat":
-            try {
-              const responseStream = await ollama.chat({
-                model: currentModel.name,
-                messages: [{ role: 'user', content: message.text }],
-                stream: true,
-              });
-
-              let responseText = '';
-              for await (const part of responseStream) {
-                responseText += part.message.content;
-                panel.webview.postMessage({ command: 'chatResponse', text: responseText });
-              }
-            } catch (error) {
-              console.error(error);
-              panel.webview.postMessage({ command: 'chatResponse', text: 'An error occurred' });
-            }
-            break;
-          case "changeModel":
-            currentModel = modelsList.models.find(model => model.name === message.modelName) || currentModel;
-            panel.webview.postMessage({ command: 'modelChanged', model: currentModel });
-            break;
-        }
-      });
+      const panel = createWebviewPanel();
+      await initializeModels(panel, context, ollamaClient);
+      setupMessageHandlers(panel, context, ollamaClient);
     }
   );
-
+  
   context.subscriptions.push(disposable);
+}
+
+function createWebviewPanel(): vscode.WebviewPanel {
+  return vscode.window.createWebviewPanel(
+    "myPilot",
+    "My Pilot",
+    vscode.ViewColumn.One,
+    { enableScripts: true }
+  );
+}
+
+async function initializeModels(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, ollamaClient: OllamaClient): Promise<boolean> {
+  try {
+    
+    const modelsList = await ollamaClient.list();
+    if (modelsList.models.length === 0) {
+      vscode.window.showErrorMessage('No models found. Extension will not be activated. Please install at least one model using Ollama.');
+      return false;
+    }
+    
+    context.globalState.update('modelsList', modelsList);
+    context.globalState.update('currentModel', modelsList.models[0]);
+    
+    panel.webview.html = getWebviewContent(modelsList, modelsList.models[0]);
+    return true;
+  } catch (error) {
+    vscode.window.showErrorMessage(`Failed to initialize models: ${error}`);
+    return false;
+  }
 }
 
 // This method is called when your extension is deactivated
 export function deactivate() {}
-function getWebviewContent(): string {
+
+function getWebviewContent(modelsList: ListResponse, currentModel: ModelResponse): string {
   return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -252,4 +242,50 @@ function getWebviewContent(): string {
         </script>
     </body>
     </html>`;
+}
+
+function setupMessageHandlers(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, ollamaClient: OllamaClient): void {
+  panel.webview.onDidReceiveMessage(async (message) => {
+    switch (message.command) {
+      case "chat":
+        await handleChatMessage(panel, context, message);
+        break;
+      case "changeModel":
+        handleModelChange(panel, context, message);
+        break;
+    }
+  });
+}
+
+async function handleChatMessage(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, message: any): Promise<void> {
+  try {
+    const currentModel = context.globalState.get('currentModel') as ModelResponse;
+    const responseStream = await ollama.chat({
+      model: currentModel.name,
+      messages: [{ role: 'user', content: message.text }],
+      stream: true,
+    });
+    
+    let responseText = '';
+    for await (const part of responseStream) {
+      responseText += part.message.content;
+      panel.webview.postMessage({ command: 'chatResponse', text: responseText });
+    }
+  } catch (error) {
+    console.error(error);
+    panel.webview.postMessage({ command: 'chatResponse', text: 'An error occurred' });
+  }
+}
+
+function handleModelChange(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, message: any): void {
+  const modelsList = context.globalState.get('modelsList') as ListResponse;
+  const newModel = modelsList.models.find(model => model.name === message.modelName);
+  
+  if (!newModel) {
+    panel.webview.postMessage({ command: 'error', text: 'Model not found' });
+    return;
+  }
+  
+  context.globalState.update('currentModel', newModel);
+  panel.webview.postMessage({ command: 'modelChanged', model: newModel });
 }
