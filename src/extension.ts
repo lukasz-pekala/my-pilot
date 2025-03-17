@@ -298,12 +298,24 @@ function getWebviewContent(
                 }
             });
 
-            // todo: check if click/keydown work
+            // Add submission tracking
+            let isSubmitting = false;
+
+            // Update form submit handler
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const text = textarea.value.trim(); // Use cached reference
+                
+                // Prevent concurrent submissions
+                if (isSubmitting) {
+                    return;
+                }
+
+                const text = textarea.value.trim();
                 if (!text) return;
 
+                // Set submission state
+                isSubmitting = true;
+                
                 // Create user's message bubble
                 createChatBubble(text, true);
                 
@@ -312,7 +324,7 @@ function getWebviewContent(
                 const modelName = modelSelector.value;
                 
                 // Disable button and show processing state
-                askButton.disabled = true;
+                askButton.disabled = isSubmitting;
                 askButton.innerHTML = '<i class="codicon codicon-loading codicon-modifier-spin"></i>';
                 
                 // Clear and reset textarea
@@ -476,13 +488,21 @@ function getWebviewContent(
                         updateMessageBubble(messageBubble, message.text);
 
                         if (message.done) {
+                            // Reset submission state
+                            isSubmitting = false;
                             askButton.disabled = false;
                             askButton.innerHTML = '<i class="codicon codicon-send"></i>';
+
+                            textarea.focus();
                         }
                         break;
-                        
+                    
                     case WebviewCommand.Error:
                         console.error(message.text);
+                        // Reset submission state on error
+                        isSubmitting = false;
+                        askButton.disabled = false;
+                        askButton.innerHTML = '<i class "codicon codicon-send"></i>';
                         break;
                 }
             });
