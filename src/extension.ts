@@ -2,14 +2,20 @@
 // Import the module and reference it with the alias vscode in your code below
 
 import * as vscode from "vscode";
-import ollama, { ListResponse, ModelResponse } from 'ollama';
-import { OllamaClient, DefaultOllamaClient } from './services/ollama-client';
+import { ListResponse, ModelResponse } from "ollama";
+import { OllamaClient, DefaultOllamaClient } from "./services/ollama-client";
+import { WebviewCommand } from "./types/commands";
+import {
+  WebviewMessage,
+  ChatMessage,
+  ChangeModelMessage,
+} from "./types/messages";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
   const ollamaClient = new DefaultOllamaClient();
-  
+
   const disposable = vscode.commands.registerCommand(
     "mypilot.openmypilot",
     async () => {
@@ -18,31 +24,49 @@ export function activate(context: vscode.ExtensionContext) {
       setupMessageHandlers(panel, context, ollamaClient);
     }
   );
-  
+
   context.subscriptions.push(disposable);
 }
 
 function createWebviewPanel(): vscode.WebviewPanel {
-  return vscode.window.createWebviewPanel(
+  const panel = vscode.window.createWebviewPanel(
     "myPilot",
     "My Pilot",
     vscode.ViewColumn.One,
-    { enableScripts: true }
+    {
+      enableScripts: true,
+      localResourceRoots: [],
+      // Add security policy
+      retainContextWhenHidden: true,
+    }
   );
+
+  // Enable vscode API in webview
+  panel.webview.options = {
+    enableScripts: true,
+    enableCommandUris: true,
+  };
+
+  return panel;
 }
 
-async function initializeModels(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, ollamaClient: OllamaClient): Promise<boolean> {
+async function initializeModels(
+  panel: vscode.WebviewPanel,
+  context: vscode.ExtensionContext,
+  ollamaClient: OllamaClient
+): Promise<boolean> {
   try {
-    
     const modelsList = await ollamaClient.list();
     if (modelsList.models.length === 0) {
-      vscode.window.showErrorMessage('No models found. Extension will not be activated. Please install at least one model using Ollama.');
+      vscode.window.showErrorMessage(
+        "No models found. Extension will not be activated. Please install at least one model using Ollama."
+      );
       return false;
     }
-    
-    context.globalState.update('modelsList', modelsList);
-    context.globalState.update('currentModel', modelsList.models[0]);
-    
+
+    context.globalState.update("modelsList", modelsList);
+    context.globalState.update("currentModel", modelsList.models[0]);
+
     panel.webview.html = getWebviewContent(modelsList, modelsList.models[0]);
     return true;
   } catch (error) {
@@ -54,238 +78,525 @@ async function initializeModels(panel: vscode.WebviewPanel, context: vscode.Exte
 // This method is called when your extension is deactivated
 export function deactivate() {}
 
-function getWebviewContent(modelsList: ListResponse, currentModel: ModelResponse): string {
-  return `<!DOCTYPE html>
+function getWebviewContent(
+  modelsList: ListResponse,
+  currentModel: ModelResponse
+): string {
+  return /*html*/ `
+    <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <title>My Pilot</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+        <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        
         <style>
             body {
-                padding: 15px;
+                margin: 0;
+                padding: 0;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
                 background-color: var(--vscode-editor-background);
                 color: var(--vscode-foreground);
                 font-family: var(--vscode-font-family);
                 font-size: var(--vscode-font-size);
-                line-height: 1.6;
             }
-            h1 {
+
+            .chat-container {
+                flex: 1;
+                overflow-y: auto;
+                padding: 15px;
+            }
+
+            .chat-bubble {
+                display: flex;
+                margin-bottom: 20px;
+                gap: 12px;
+            }
+
+            .avatar {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
+
+            .message-content {
+                flex: 1;
+            }
+
+            .message-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 4px;
+            }
+
+            .username {
+                font-weight: 500;
                 color: var(--vscode-foreground);
-                font-weight: normal;
-                border-bottom: 1px solid var(--vscode-panel-border);
-                padding-bottom: 5px;
             }
-            h2 {
-                color: var(--vscode-foreground);
-                font-weight: normal;
-                font-size: 1.1em;
-            }
-            #question {
-                width: calc(100% - 20px);
-                min-height: 100px;
+
+            .message-bubble {
+                background: var(--vscode-input-background);
+                border-radius: 8px;
                 padding: 8px;
-                margin-bottom: 10px;
+                position: relative;
+            }
+
+            .input-container {
+                position: sticky;
+                bottom: 0;
+                padding: 15px;
+                background: var(--vscode-editor-background);
+                border-top: 1px solid var(--vscode-panel-border);
+            }
+
+            .input-wrapper {
+                display: flex;
+                gap: 10px;
+            }
+
+            #question {
+                flex: 1;
+                min-height: 44px;
+                max-height: 200px;
+                padding: 12px;
                 background-color: var(--vscode-input-background);
                 color: var(--vscode-input-foreground);
                 border: 1px solid var(--vscode-input-border);
-                border-radius: 2px;
+                border-radius: 6px;
                 font-family: var(--vscode-editor-font-family);
-                resize: vertical;
+                resize: none;
+                overflow-y: auto;
             }
-            #question:focus {
-                outline: 1px solid var(--vscode-focusBorder);
-                border-color: var (--vscode-focusBorder);
+
+            .message-bubble pre {
+                position: relative;
+                background-color: var(--vscode-textCodeBlock-background);
+                padding: 16px;
+                border-radius: 6px;
+                overflow-x: auto;
             }
+
+            .copy-button {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: var(--vscode-button-background);
+                color: var(--vscode-button-foreground);
+                border: none;
+                border-radius: 4px;
+                padding: 4px 8px;
+                cursor: pointer;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+
+            .message-bubble pre:hover .copy-button {
+                opacity: 1;
+            }
+
+            .copy-button:hover {
+                background: var(--vscode-button-hoverBackground);
+            }
+
             #askBtn {
-                padding: 8px 12px;
+                padding: 8px 16px;
                 background-color: var(--vscode-button-background);
                 color: var(--vscode-button-foreground);
                 border: none;
-                border-radius: 2px;
+                border-radius: 4px;
                 cursor: pointer;
             }
+
             #askBtn:hover {
                 background-color: var(--vscode-button-hoverBackground);
             }
-            #answer {
-                margin-top: 15px;
-                padding: 10px;
-                background-color: var(--vscode-editor-background);
-                border: 1px solid var(--vscode-panel-border);
-                border-radius: 2px;
-                white-space: pre-wrap;
-                font-family: var(--vscode-editor-font-family);
-            }
-            ::-webkit-scrollbar {
-                width: 10px;
-            }
-            ::-webkit-scrollbar-track {
-                background: var(--vscode-scrollbarSlider-background);
-            }
-            ::-webkit-scrollbar-thumb {
-                background: var(--vscode-scrollbarSlider-hoverBackground);
-            }
-            
-            .model-info {
-                margin: 10px 0;
-                padding: 8px;
-                background-color: var(--vscode-editor-background);
-                border: 1px solid var(--vscode-panel-border);
-                border-radius: 2px;
-                opacity: 0.8;
-            }
-            
-            .model-info h3 {
-                margin: 0 0 5px 0;
-                color: var(--vscode-descriptionForeground);
-                font-weight: normal;
-                font-size: 0.9em;
-                display: flex;
-                align-items: center;
-                gap: 5px;
-            }
-            
-            .model-info p {
-                margin: 4px 0;
-                font-size: 0.85em;
-                color: var(--vscode-descriptionForeground);
-            }
-            
-            .model-tag {
-                color: var(--vscode-descriptionForeground);
-                font-size: 0.85em;
-                margin-right: 8px;
-            }
-            
-            .codicon {
-                font-family: codicon;
-                cursor: default;
-                font-size: 14px;
-                color: var(--vscode-descriptionForeground);
+
+            #askBtn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
             }
 
-            #modelSelect {
-                width: 100%;
-                padding: 8px;
-                background-color: var(--vscode-input-background);
-                color: var(--vscode-input-foreground);
-                border: 1px solid var(--vscode-input-border);
-                border-radius: 2px;
-                font-family: var(--vscode-editor-font-family);
-                font-size: var(--vscode-font-size);
-                margin-bottom: 10px;
+            .model-selector {
+                margin: 15px;
+                padding: 8px 12px;
+                background-color: var(--vscode-dropdown-background);
+                color: var(--vscode-dropdown-foreground);
+                border: 1px solid var(--vscode-dropdown-border);
+                border-radius: 4px;
+                width: calc(100% - 30px);
+                cursor: pointer;
             }
-            #modelSelect:focus {
+
+            .model-selector:focus {
                 outline: 1px solid var(--vscode-focusBorder);
-                border-color: var(--vscode-focusBorder);
+                outline-offset: -1px;
+            }
+
+            .model-selector:hover {
+                background-color: var(--vscode-dropdown-listBackground);
             }
         </style>
     </head>
     <body>
-        <h1>My Pilot</h1>
+        <select id="modelSelector" class="model-selector">
+            ${modelsList.models
+              .map(
+                (model) => `
+                <option value="${model.name}" ${
+                  model.name === currentModel.name ? "selected" : ""
+                }>
+                    ${model.name}
+                </option>
+            `
+              )
+              .join("")}
+        </select>
+        <div class="chat-container" id="chatContainer"></div>
         
-        <div class="model-info">
-            <h3>
-                <i class="codicon codicon-symbol-class"></i>
-                Current Model: <span id="currentModelName">${currentModel.name}</span>
-            </h3>
+        <div class="input-container">
+            <form id="chatForm" class="input-wrapper">
+                <textarea id="question" placeholder="Type your message..." rows="1"></textarea>
+                <button type="submit" id="askBtn">Send</button>
+            </form>
         </div>
 
-        <h2>Change Model</h2>
-        <select id="modelSelect">
-          ${modelsList.models.map(model => `<option value="${model.name}">${model.name}</option>`).join('')}
-        </select>
-
-        <h2>Ask AI about something</h2>
-        <textarea id="question" placeholder="Type your question here..."></textarea>
-        <button id="askBtn">Ask AI</button>
-        <div id="answer"></div>
         <script>
+            // Acquire vscode API
             const vscode = acquireVsCodeApi();
 
-            document.getElementById('modelSelect').addEventListener('change', () => {
-                const modelName = document.getElementById('modelSelect').value;
-                vscode.postMessage({ command: 'changeModel', modelName });
+            const WebviewCommand = {
+                Chat: 'chat',
+                ChatResponse: 'chatResponse',
+                ChangeModel: 'changeModel',
+                Error: 'error',
+                ModelChanged: 'modelChanged'
+            };
+
+            const form = document.getElementById('chatForm');
+            const textarea = document.getElementById('question');
+            const askButton = document.getElementById('askBtn');
+            const modelSelector = document.getElementById('modelSelector');
+
+            // Auto-resize textarea
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
             });
 
-            document.getElementById('askBtn').addEventListener('click', () => {
-                const text = document.getElementById('question').value;
-                if (!text) {
+            // Handle Enter key (submit on Enter, new line on Shift+Enter)
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    form.requestSubmit();
+                }
+            });
+
+            // Add submission tracking
+            let isSubmitting = false;
+
+            // Update form submit handler
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                // Prevent concurrent submissions
+                if (isSubmitting) {
                     return;
                 }
 
-                const askButton = document.getElementById('askBtn');
-                askButton.disabled = true;
-                askButton.textContent = 'Processing...';
+                const text = textarea.value.trim();
+                if (!text) return;
 
+                // Set submission state
+                isSubmitting = true;
+                
+                // Create user's message bubble
+                createChatBubble(text, true);
+                
+                // Create thinking bubble
+                const thinkingBubbleId = createThinkingBubble(modelSelector.value);
+                const modelName = modelSelector.value;
+                
+                // Disable button and show processing state
+                askButton.disabled = isSubmitting;
+                askButton.innerHTML = '<i class="codicon codicon-loading codicon-modifier-spin"></i>';
+                
+                // Clear and reset textarea
+                textarea.value = '';
+                textarea.style.height = 'auto';
+                
                 const message = {
-                    command: 'chat',
+                    command: WebviewCommand.Chat,
                     text,
+                    modelName,
+                    bubbleId: thinkingBubbleId
                 };
                 vscode.postMessage(message);
+            });
+
+            function createThinkingBubble(modelName) {
+                const bubbleId = 'thinking-' + Date.now();
+                const bubble = document.createElement('div');
+                bubble.className = 'chat-bubble';
+                bubble.id = bubbleId;
+            
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar codicon codicon-symbol-misc';
+            
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+            
+                const header = document.createElement('div');
+                header.className = 'message-header';
+
+                const usernameSpan = document.createElement('span');
+                usernameSpan.className = 'username';
+                usernameSpan.textContent = modelName;
+                header.appendChild(usernameSpan);
+            
+                const messageBubble = document.createElement('div');
+                messageBubble.className = 'message-bubble';
+                messageBubble.innerHTML = '<i class="codicon codicon-loading codicon-modifier-spin"></i> Thinking...';
+            
+                messageContent.appendChild(header);
+                messageContent.appendChild(messageBubble);
+                bubble.appendChild(avatar);
+                bubble.appendChild(messageContent);
+            
+                document.getElementById('chatContainer').appendChild(bubble);
+                bubble.scrollIntoView({ behavior: 'smooth' });
+                return bubbleId;
+            }
+
+            function createChatBubble(content, isUser, modelName) {
+                const bubble = document.createElement('div');
+                bubble.className = 'chat-bubble';
+            
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar codicon';
+                // Use VS Code's built-in Codicons
+                if (isUser) {
+                    avatar.className += ' codicon-account';
+                } else {
+                    avatar.className += ' codicon-symbol-misc';
+                }
+            
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+            
+                const header = document.createElement('div');
+                header.className = 'message-header';
+
+                const usernameSpan = document.createElement('span');
+                usernameSpan.className = 'username';
+                usernameSpan.textContent = isUser ? 'User' : modelName;
+
+                header.appendChild(usernameSpan);
+            
+                const messageBubble = document.createElement('div');
+                messageBubble.className = 'message-bubble';
+                messageBubble.innerHTML = marked.parse(content);
+            
+                // Add copy buttons to code blocks with codicon
+                messageBubble.querySelectorAll('pre').forEach(pre => {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-button';
+                    copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
+                    copyBtn.onclick = () => {
+                        const code = pre.querySelector('code').textContent;
+                        handleCodeCopy(code, copyBtn);
+                    };
+                    pre.appendChild(copyBtn);
+                });
+            
+                messageContent.appendChild(header);
+                messageContent.appendChild(messageBubble);
+                bubble.appendChild(avatar);
+                bubble.appendChild(messageContent);
+            
+                document.getElementById('chatContainer').appendChild(bubble);
+                bubble.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function handleCodeCopy(code, button) {
+                return navigator.clipboard.writeText(code)
+                    .then(() => {
+                        button.innerHTML = '<i class="codicon codicon-check"></i>';
+                        setTimeout(() => {
+                            button.innerHTML = '<i class="codicon codicon-copy"></i>';
+                        }, 2000);
+                    });
+            }
+
+            function addCopyButtonsToCodeBlocks(container) {
+                container.querySelectorAll('pre').forEach(pre => {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-button';
+                    copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
+                    copyBtn.onclick = () => {
+                        const code = pre.querySelector('code').textContent;
+                        handleCodeCopy(code, copyBtn);
+                    };
+                    pre.appendChild(copyBtn);
+                });
+            }
+
+            function updateMessageBubble(bubble, text) {
+                bubble.innerHTML = marked.parse(text);
+                addCopyButtonsToCodeBlocks(bubble);
+                bubble.querySelectorAll('pre code').forEach(block => {
+                    hljs.highlightElement(block);
+                });
+            }
+
+            modelSelector.addEventListener('change', (e) => {
+                const modelName = e.target.value;
+                vscode.postMessage({ 
+                    command: WebviewCommand.ChangeModel, 
+                    modelName 
+                });
+            });
+
+            // Configure marked options
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                },
+                breaks: true,
+                gfm: true
             });
 
             window.addEventListener('message', event => {
                 const message = event.data;
                 switch (message.command) {
-                    case 'chatResponse':
-                        document.getElementById('answer').innerText = message.text;
-                        document.getElementById('askBtn').disabled = false;
-                        document.getElementById('askBtn').textContent = 'Ask AI';
+                    case WebviewCommand.ChatResponse:
+                        const thinkingBubble = document.getElementById(message.bubbleId);
+                        if (!thinkingBubble) return; // Early return if element not found
+
+                        const messageBubble = thinkingBubble.querySelector('.message-bubble');
+                        if (!messageBubble) return; // Early return if element not found
+
+                        updateMessageBubble(messageBubble, message.text);
+
+                        if (message.done) {
+                            // Reset submission state
+                            isSubmitting = false;
+                            askButton.disabled = false;
+                            askButton.innerHTML = '<i class="codicon codicon-send"></i>';
+
+                            textarea.focus();
+                        }
                         break;
-                    case 'modelChanged':
-                        document.getElementById('currentModelName').innerText = message.model.name;
+                    
+                    case WebviewCommand.Error:
+                        console.error(message.text);
+                        // Reset submission state on error
+                        isSubmitting = false;
+                        askButton.disabled = false;
+                        askButton.innerHTML = '<i class "codicon codicon-send"></i>';
                         break;
                 }
             });
-        </script>
+      </script>
     </body>
     </html>`;
 }
 
-function setupMessageHandlers(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, ollamaClient: OllamaClient): void {
-  panel.webview.onDidReceiveMessage(async (message) => {
+function setupMessageHandlers(
+  panel: vscode.WebviewPanel,
+  context: vscode.ExtensionContext,
+  ollamaClient: OllamaClient
+): void {
+  panel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
     switch (message.command) {
-      case "chat":
-        await handleChatMessage(panel, context, message);
+      case WebviewCommand.Chat:
+        await handleChatMessage(panel, context, message, ollamaClient);
         break;
-      case "changeModel":
+      case WebviewCommand.ChangeModel:
         handleModelChange(panel, context, message);
         break;
     }
   });
 }
 
-async function handleChatMessage(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, message: any): Promise<void> {
+function sendChatResponse(
+  panel: vscode.WebviewPanel,
+  text: string,
+  bubbleId: string,
+  done: boolean
+) {
+  return panel.webview.postMessage({
+    command: WebviewCommand.ChatResponse,
+    text,
+    bubbleId,
+    done,
+  });
+}
+
+async function handleChatMessage(
+  panel: vscode.WebviewPanel,
+  context: vscode.ExtensionContext,
+  message: ChatMessage,
+  ollamaClient: OllamaClient
+): Promise<void> {
   try {
-    const currentModel = context.globalState.get('currentModel') as ModelResponse;
-    const responseStream = await ollama.chat({
+    const currentModel = context.globalState.get(
+      "currentModel"
+    ) as ModelResponse;
+
+    const responseStream = await ollamaClient.chat({
       model: currentModel.name,
-      messages: [{ role: 'user', content: message.text }],
+      messages: [{ role: "user", content: message.text }],
       stream: true,
     });
-    
-    let responseText = '';
+
+    let responseText = "";
     for await (const part of responseStream) {
       responseText += part.message.content;
-      panel.webview.postMessage({ command: 'chatResponse', text: responseText });
+      await sendChatResponse(panel, responseText, message.bubbleId, false);
     }
+
+    await sendChatResponse(panel, responseText, message.bubbleId, true);
   } catch (error) {
-    console.error(error);
-    panel.webview.postMessage({ command: 'chatResponse', text: 'An error occurred' });
+    await sendChatResponse(
+      panel,
+      "An error occurred while communicating with the model",
+      message.bubbleId,
+      true
+    );
   }
 }
 
-function handleModelChange(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, message: any): void {
-  const modelsList = context.globalState.get('modelsList') as ListResponse;
-  const newModel = modelsList.models.find(model => model.name === message.modelName);
-  
+function handleModelChange(
+  panel: vscode.WebviewPanel,
+  context: vscode.ExtensionContext,
+  message: ChangeModelMessage
+): void {
+  const modelsList = context.globalState.get("modelsList") as ListResponse;
+  const newModel = modelsList.models.find(
+    (model) => model.name === message.modelName
+  );
+
   if (!newModel) {
-    panel.webview.postMessage({ command: 'error', text: 'Model not found' });
+    panel.webview.postMessage({
+      command: WebviewCommand.Error,
+      text: "Model not found",
+    });
     return;
   }
-  
-  context.globalState.update('currentModel', newModel);
-  panel.webview.postMessage({ command: 'modelChanged', model: newModel });
+
+  context.globalState.update("currentModel", newModel);
+  panel.webview.postMessage({
+    command: WebviewCommand.ModelChanged,
+    model: newModel,
+  });
 }
