@@ -398,11 +398,7 @@ function getWebviewContent(
                     copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
                     copyBtn.onclick = () => {
                         const code = pre.querySelector('code').textContent;
-                        navigator.clipboard.writeText(code);
-                        copyBtn.innerHTML = '<i class="codicon codicon-check"></i>';
-                        setTimeout(() => {
-                            copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
-                        }, 2000);
+                        handleCodeCopy(code, copyBtn);
                     };
                     pre.appendChild(copyBtn);
                 });
@@ -414,6 +410,37 @@ function getWebviewContent(
             
                 document.getElementById('chatContainer').appendChild(bubble);
                 bubble.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function handleCodeCopy(code, button) {
+                return navigator.clipboard.writeText(code)
+                    .then(() => {
+                        button.innerHTML = '<i class="codicon codicon-check"></i>';
+                        setTimeout(() => {
+                            button.innerHTML = '<i class="codicon codicon-copy"></i>';
+                        }, 2000);
+                    });
+            }
+
+            function addCopyButtonsToCodeBlocks(container) {
+                container.querySelectorAll('pre').forEach(pre => {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-button';
+                    copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
+                    copyBtn.onclick = () => {
+                        const code = pre.querySelector('code').textContent;
+                        handleCodeCopy(code, copyBtn);
+                    };
+                    pre.appendChild(copyBtn);
+                });
+            }
+
+            function updateMessageBubble(bubble, text) {
+                bubble.innerHTML = marked.parse(text);
+                addCopyButtonsToCodeBlocks(bubble);
+                bubble.querySelectorAll('pre code').forEach(block => {
+                    hljs.highlightElement(block);
+                });
             }
 
             modelSelector.addEventListener('change', (e) => {
@@ -446,27 +473,7 @@ function getWebviewContent(
                         const messageBubble = thinkingBubble.querySelector('.message-bubble');
                         if (!messageBubble) return; // Early return if element not found
 
-                        messageBubble.innerHTML = marked.parse(message.text);
-                        // Add copy buttons to code blocks
-                        messageBubble.querySelectorAll('pre').forEach(pre => {
-                            const copyBtn = document.createElement('button');
-                            copyBtn.className = 'copy-button';
-                            copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
-                            copyBtn.onclick = () => {
-                                const code = pre.querySelector('code').textContent;
-                                navigator.clipboard.writeText(code);
-                                copyBtn.innerHTML = '<i class="codicon codicon-check"></i>';
-                                setTimeout(() => {
-                                    copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
-                                }, 2000);
-                            };
-                            pre.appendChild(copyBtn);
-                        });
-
-                        // Highlight code blocks
-                        messageBubble.querySelectorAll('pre code').forEach((block) => {
-                            hljs.highlightBlock(block);
-                        });
+                        updateMessageBubble(messageBubble, message.text);
 
                         if (message.done) {
                             askButton.disabled = false;
