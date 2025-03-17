@@ -4,8 +4,12 @@
 import * as vscode from "vscode";
 import { ListResponse, ModelResponse } from "ollama";
 import { OllamaClient, DefaultOllamaClient } from "./services/ollama-client";
-import { WebviewCommand } from './types/commands';
-import { WebviewMessage, ChatMessage, ChangeModelMessage } from './types/messages';
+import { WebviewCommand } from "./types/commands";
+import {
+  WebviewMessage,
+  ChatMessage,
+  ChangeModelMessage,
+} from "./types/messages";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -33,14 +37,14 @@ function createWebviewPanel(): vscode.WebviewPanel {
       enableScripts: true,
       localResourceRoots: [],
       // Add security policy
-      retainContextWhenHidden: true
+      retainContextWhenHidden: true,
     }
   );
 
   // Enable vscode API in webview
   panel.webview.options = {
     enableScripts: true,
-    enableCommandUris: true
+    enableCommandUris: true,
   };
 
   return panel;
@@ -78,7 +82,7 @@ function getWebviewContent(
   modelsList: ListResponse,
   currentModel: ModelResponse
 ): string {
-  return /*html*/`
+  return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -483,7 +487,7 @@ function getWebviewContent(
 function setupMessageHandlers(
   panel: vscode.WebviewPanel,
   context: vscode.ExtensionContext,
-  ollamaClient: OllamaClient,
+  ollamaClient: OllamaClient
 ): void {
   panel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
     switch (message.command) {
@@ -494,6 +498,20 @@ function setupMessageHandlers(
         handleModelChange(panel, context, message);
         break;
     }
+  });
+}
+
+function sendChatResponse(
+  panel: vscode.WebviewPanel,
+  text: string,
+  bubbleId: string,
+  done: boolean
+) {
+  return panel.webview.postMessage({
+    command: WebviewCommand.ChatResponse,
+    text,
+    bubbleId,
+    done,
   });
 }
 
@@ -508,7 +526,6 @@ async function handleChatMessage(
       "currentModel"
     ) as ModelResponse;
 
-
     const responseStream = await ollamaClient.chat({
       model: currentModel.name,
       messages: [{ role: "user", content: message.text }],
@@ -518,30 +535,17 @@ async function handleChatMessage(
     let responseText = "";
     for await (const part of responseStream) {
       responseText += part.message.content;
-      panel.webview.postMessage({
-        command: WebviewCommand.ChatResponse,
-        text: responseText,
-        bubbleId: message.bubbleId,
-        done: false
-      });
+      await sendChatResponse(panel, responseText, message.bubbleId, false);
     }
 
-    // Send final message with done flag
-    panel.webview.postMessage({
-      command: WebviewCommand.ChatResponse,
-      text: responseText,
-      bubbleId: message.bubbleId,
-      done: true
-    });
-
+    await sendChatResponse(panel, responseText, message.bubbleId, true);
   } catch (error) {
-    console.error(error);
-    panel.webview.postMessage({
-      command: WebviewCommand.ChatResponse,
-      text: "An error occurred while communicating with the model",
-      bubbleId: message.bubbleId,
-      done: true
-    });
+    await sendChatResponse(
+      panel,
+      "An error occurred while communicating with the model",
+      message.bubbleId,
+      true
+    );
   }
 }
 
@@ -556,16 +560,16 @@ function handleModelChange(
   );
 
   if (!newModel) {
-    panel.webview.postMessage({ 
-      command: WebviewCommand.Error, 
-      text: "Model not found" 
+    panel.webview.postMessage({
+      command: WebviewCommand.Error,
+      text: "Model not found",
     });
     return;
   }
 
   context.globalState.update("currentModel", newModel);
-  panel.webview.postMessage({ 
-    command: WebviewCommand.ModelChanged, 
-    model: newModel 
+  panel.webview.postMessage({
+    command: WebviewCommand.ModelChanged,
+    model: newModel,
   });
 }
