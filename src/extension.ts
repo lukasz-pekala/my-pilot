@@ -61,6 +61,9 @@ function getWebviewContent(modelsList: ListResponse, currentModel: ModelResponse
         <meta charset="UTF-8">
         <title>My Pilot</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+        <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <style>
             body {
                 padding: 15px;
@@ -116,6 +119,37 @@ function getWebviewContent(modelsList: ListResponse, currentModel: ModelResponse
                 border-radius: 2px;
                 white-space: pre-wrap;
                 font-family: var(--vscode-editor-font-family);
+            }
+            #answer pre {
+                background-color: var(--vscode-textCodeBlock-background);
+                padding: 16px;
+                border-radius: 6px;
+                overflow-x: auto;
+            }
+
+            #answer code {
+                font-family: var(--vscode-editor-font-family);
+                font-size: 0.9em;
+            }
+
+            #answer p {
+                margin: 0.8em 0;
+            }
+
+            #answer h1, #answer h2, #answer h3 {
+                border-bottom: 1px solid var(--vscode-panel-border);
+                padding-bottom: 0.3em;
+            }
+
+            #answer ul, #answer ol {
+                padding-left: 2em;
+            }
+
+            #answer blockquote {
+                border-left: 4px solid var(--vscode-panel-border);
+                margin: 0;
+                padding-left: 1em;
+                color: var(--vscode-descriptionForeground);
             }
             ::-webkit-scrollbar {
                 width: 10px;
@@ -226,11 +260,27 @@ function getWebviewContent(modelsList: ListResponse, currentModel: ModelResponse
                 vscode.postMessage(message);
             });
 
+            // Configure marked options
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                },
+                breaks: true,
+                gfm: true
+            });
+
             window.addEventListener('message', event => {
                 const message = event.data;
                 switch (message.command) {
                     case 'chatResponse':
-                        document.getElementById('answer').innerText = message.text;
+                        document.getElementById('answer').innerHTML = marked.parse(message.text);
+                        // Highlight all code blocks after rendering markdown
+                        document.querySelectorAll('#answer pre code').forEach((block) => {
+                            hljs.highlightBlock(block);
+                        });
                         document.getElementById('askBtn').disabled = false;
                         document.getElementById('askBtn').textContent = 'Ask AI';
                         break;
