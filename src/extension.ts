@@ -82,7 +82,7 @@ function getWebviewContent(
   modelsList: ListResponse,
   currentModel: ModelResponse
 ): string {
-  return /*html*/ `
+  return /*html*/`
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -252,7 +252,7 @@ function getWebviewContent(
                 <option value="${model.name}" ${
                   model.name === currentModel.name ? "selected" : ""
                 }>
-                    ${model.name}
+                    ${model.name} [${formatSize(model.size)}]
                 </option>
             `
               )
@@ -509,6 +509,20 @@ function getWebviewContent(
       </script>
     </body>
     </html>`;
+}
+
+// Add helper function to format size
+function formatSize(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
 function setupMessageHandlers(
