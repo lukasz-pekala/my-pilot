@@ -19,9 +19,22 @@ export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
     "mypilot.openmypilot",
     async () => {
-      const panel = createWebviewPanel();
-      await initializeModels(panel, context, ollamaClient);
-      setupMessageHandlers(panel, context, ollamaClient);
+      try {
+        // Show progress during initialization
+        await vscode.window.withProgress({
+          location: vscode.ProgressLocation.Notification,
+          title: "Initializing My Pilot...",
+          cancellable: false,
+        }, async () => {
+          const panel = createWebviewPanel();
+          const initialized = await initializeModels(panel, context, ollamaClient);
+          if (initialized) {
+            setupMessageHandlers(panel, context, ollamaClient);
+          }
+        });
+      } catch (error) {
+        vscode.window.showErrorMessage(`Failed to initialize My Pilot: ${error}`);
+      }
     }
   );
 
@@ -530,16 +543,27 @@ function setupMessageHandlers(
   context: vscode.ExtensionContext,
   ollamaClient: OllamaClient
 ): void {
-  panel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
-    switch (message.command) {
-      case WebviewCommand.Chat:
-        await handleChatMessage(panel, context, message, ollamaClient);
-        break;
-      case WebviewCommand.ChangeModel:
-        handleModelChange(panel, context, message);
-        break;
-    }
-  });
+  // Track disposables
+  const disposables: vscode.Disposable[] = [];
+
+  // Add panel disposal handler
+  panel.onDidDispose(() => {
+    disposables.forEach(d => d?.dispose());
+  }, null, disposables);
+
+  // Add message handler
+  disposables.push(
+    panel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
+      switch (message.command) {
+        case WebviewCommand.Chat:
+          await handleChatMessage(panel, context, message, ollamaClient);
+          break;
+        case WebviewCommand.ChangeModel:
+          handleModelChange(panel, context, message);
+          break;
+      }
+    })
+  );
 }
 
 function sendChatResponse(
