@@ -297,6 +297,17 @@ function getWebviewContent(
             const askButton = document.getElementById('askBtn');
             const modelSelector = document.getElementById('modelSelector');
 
+            // Disable button initially
+            askButton.disabled = true;
+
+            // Update button state based on textarea content
+            function updateButtonState() {
+                askButton.disabled = textarea.value.trim().length === 0 || isSubmitting;
+            }
+
+            // Add input listener for textarea
+            textarea.addEventListener('input', updateButtonState);
+
             // Auto-resize textarea
             textarea.addEventListener('input', function() {
                 this.style.height = 'auto';
@@ -328,6 +339,7 @@ function getWebviewContent(
 
                 // Set submission state
                 isSubmitting = true;
+                updateButtonState();
                 
                 // Create user's message bubble
                 createChatBubble(text, true);
