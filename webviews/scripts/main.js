@@ -99,8 +99,10 @@ function createThinkingBubble(modelName) {
 
   const messageBubble = document.createElement("div");
   messageBubble.className = "message-bubble";
-  messageBubble.innerHTML =
-    '<i class="codicon codicon-loading codicon-modifier-spin"></i> Thinking...';
+  const loadingIcon = document.createElement('i');
+  loadingIcon.className = 'codicon codicon-loading codicon-modifier-spin';
+  messageBubble.appendChild(loadingIcon);
+  messageBubble.appendChild(document.createTextNode(' Thinking...'));
 
   messageContent.appendChild(header);
   messageContent.appendChild(messageBubble);
@@ -215,7 +217,7 @@ marked.setOptions({
 window.addEventListener("message", (event) => {
   const message = event.data;
   switch (message.command) {
-    case 'chatResponse':
+    case 'chatResponse': {
       const thinkingBubble = document.getElementById(message.bubbleId);
       if (!thinkingBubble) {
         return;
@@ -236,6 +238,7 @@ window.addEventListener("message", (event) => {
 
         textarea.focus();
       }
+    }
       break;
 
     case 'error':
@@ -245,5 +248,8 @@ window.addEventListener("message", (event) => {
       askButton.disabled = false;
       askButton.innerHTML = '<i class="codicon codicon-send"></i>';
       break;
+
+    default:
+      console.warn('Unknown command received:', message.command);
   }
 });

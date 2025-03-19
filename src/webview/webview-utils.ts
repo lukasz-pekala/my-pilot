@@ -44,9 +44,11 @@ function getWebviewResources(
 }
 
 function mapListOfModels(modelsList: ListResponse): string {
-  if (!modelsList || !modelsList) {
+  if (!modelsList || !modelsList.models || modelsList.models.length === 0) {
     return '<option value="">No models available</option>';
   }
+  // ... rest of the function logic
+}
   return modelsList.models
     .map(
       (model) =>
