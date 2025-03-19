@@ -20,8 +20,6 @@ export function createPanel(
     chatHistory: [],
   });
 
-  // display information meesagee with stringified state
-  vscode.window.showInformationMessage(JSON.stringify(state));
 
   if (state.currentPanel?.title && state.isWebviewActive) {
     state.currentPanel.reveal(column);
