@@ -15,9 +15,15 @@ export function createPanel(
     vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.One;
   const state = context.globalState.get<ExtensionState>('state', {
     isWebviewActive: false,
+    currentPanel: undefined,
+    selectedModel: undefined,
+    chatHistory: [],
   });
 
-  if (state.currentPanel) {
+  // display information meesagee with stringified state
+  vscode.window.showInformationMessage(JSON.stringify(state));
+
+  if (state.currentPanel?.title && state.isWebviewActive) {
     state.currentPanel.reveal(column);
     return state.currentPanel;
   }

@@ -15,7 +15,7 @@ export function handleChangeModelMessage(
   );
 
   if (selectedModel) {
-    updateSelectedModel(context, selectedModel.name);
+    updateSelectedModel(context, selectedModel);
   } else {
     panel.webview.postMessage({
       command: WebviewCommand.Error,

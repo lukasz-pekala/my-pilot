@@ -8,6 +8,8 @@ import { initializeState } from './utils/state-manager';
 import { createPanel, setupMessageHandlers } from './webview/chat-panel';
 import { ListResponse } from 'ollama';
 
+import { ExtensionState } from './types/extension-state';
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -67,6 +69,21 @@ export function updateContextWithModelsList(
   }
 
   context.globalState.update('modelsList', modelsList);
+  const previousModel =
+    context.globalState.get<ExtensionState['selectedModel']>('selectedModel');
+
+  // Try to restore the previously selected model if it still exists const previousModel = context.globalState.get('selectedModel');
+  if (previousModel) {
+    const modelStillExists = modelsList.models.some(
+      (model) => model.name === previousModel.name
+    );
+    if (modelStillExists) {
+      // Keep the previously selected model
+      return true;
+    }
+  }
+
+  // Otherwise default to the first model
   context.globalState.update('selectedModel', modelsList.models[0]);
 
   return true;

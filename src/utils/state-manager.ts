@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ExtensionState } from '../types/extension-state';
+import { ModelResponse } from 'ollama';
 
 const DEFAULT_STATE: ExtensionState = {
   isWebviewActive: false,
@@ -29,7 +30,7 @@ export function initializeState(context: vscode.ExtensionContext): void {
 
 export function updateSelectedModel(
   context: vscode.ExtensionContext,
-  model: string
+  model: ModelResponse
 ): void {
   updateState(context, { selectedModel: model });
 }

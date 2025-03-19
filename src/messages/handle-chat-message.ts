@@ -3,6 +3,7 @@ import { Message, ModelResponse } from 'ollama';
 import { WebviewCommand } from '../types/commands';
 import { ChatMessage } from '../types/messages';
 import { OllamaClient } from '../services/ollama-client';
+import { ExtensionState } from '../types/extension-state';
 
 export async function handleChatMessage(
   panel: vscode.WebviewPanel,
@@ -11,9 +12,18 @@ export async function handleChatMessage(
   ollamaClient: OllamaClient
 ): Promise<void> {
   try {
-    const selectedModel = context.globalState.get(
-      'selectedModel'
-    ) as ModelResponse;
+    const selectedModel =
+      context.globalState.get<ExtensionState['selectedModel']>('selectedModel');
+
+    if (!selectedModel) {
+      await postChatResponseToWebView(
+        panel,
+        'No model selected. Please select a model to chat with.',
+        message.bubbleId,
+        true
+      );
+      return;
+    }
 
     // Store conversation history in the context.globalState
     let conversationHistory =
@@ -53,7 +63,7 @@ export async function handleChatMessage(
   } catch (error) {
     await postChatResponseToWebView(
       panel,
-      'An error occurred while communicating with the model',
+      `An error occurred while communicating with the model ${error}`,
       message.bubbleId,
       true
     );
