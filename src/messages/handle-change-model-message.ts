@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ChangeModelMessage } from '../types/messages';
 import { ListResponse } from 'ollama';
 import { WebviewCommand } from '../types/commands';
+import { updateSelectedModel } from '../utils/state-manager';
 
 export function handleChangeModelMessage(
   panel: vscode.WebviewPanel,
@@ -9,21 +10,16 @@ export function handleChangeModelMessage(
   message: ChangeModelMessage
 ): void {
   const modelsList = context.globalState.get('modelsList') as ListResponse;
-  const newModel = modelsList.models.find(
+  const selectedModel = modelsList.models.find(
     (model) => model.name === message.modelName
   );
 
-  if (!newModel) {
+  if (selectedModel) {
+    updateSelectedModel(context, selectedModel.name);
+  } else {
     panel.webview.postMessage({
       command: WebviewCommand.Error,
       text: 'Model not found',
     });
-    return;
   }
-
-  context.globalState.update('currentModel', newModel);
-  panel.webview.postMessage({
-    command: WebviewCommand.ChangeModel,
-    model: newModel,
-  });
 }

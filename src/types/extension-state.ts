@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
 export interface ExtensionState {
-  currentPanel?: vscode.WebviewPanel;
   isWebviewActive: boolean;
+  currentPanel?: vscode.WebviewPanel;
+  selectedModel?: string;
+  chatHistory?: Array<{ role: string; content: string }>;
 }
