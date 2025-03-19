@@ -61,12 +61,18 @@ export async function handleChatMessage(
     // Update the global state with the updated conversation history
     context.globalState.update('conversationHistory', conversationHistory);
   } catch (error) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Unknown error occurred';
+
     await postChatResponseToWebView(
       panel,
-      `An error occurred while communicating with the model ${error}`,
+      `An error occurred while communicating with the model: ${errorMessage}`,
       message.bubbleId,
       true
     );
+    console.error('Chat message handling error:', error);
+  }
   }
 }
 
