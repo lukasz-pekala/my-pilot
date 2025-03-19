@@ -25,7 +25,9 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -36,6 +38,7 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "eslint": "^9.21.0",
+    "prettier": "^3.5.3",
     "typescript": "^5.7.3"
   },
   "dependencies": {
