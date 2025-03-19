@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ModelResponse } from 'ollama';
+import { Message, ModelResponse } from 'ollama';
 import { WebviewCommand } from '../types/commands';
 import { ChatMessage } from '../types/messages';
 import { OllamaClient } from '../services/ollama-client';
@@ -16,11 +16,12 @@ export async function handleChatMessage(
     ) as ModelResponse;
 
     // Store conversation history in the context.globalState
-    let conversationHistory = context.globalState.get('conversationHistory') || [];
-    
+    let conversationHistory =
+      context.globalState.get<Message[]>('conversationHistory') || [];
+
     // Add the new message to history
     conversationHistory.push({ role: 'user', content: message.text });
-    
+
     const responseStream = await ollamaClient.chat({
       model: currentModel.name,
       messages: conversationHistory,
@@ -42,8 +43,13 @@ export async function handleChatMessage(
       panel,
       responseText,
       message.bubbleId,
-      true
+      true // todo: consider posting separate message for done
     );
+
+    // Add the assistant's response to the conversation history
+    conversationHistory.push({ role: 'assistant', content: responseText });
+    // Update the global state with the updated conversation history
+    context.globalState.update('conversationHistory', conversationHistory);
   } catch (error) {
     await postChatResponseToWebView(
       panel,
