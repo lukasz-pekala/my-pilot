@@ -11,8 +11,8 @@ export async function handleChatMessage(
   ollamaClient: OllamaClient
 ): Promise<void> {
   try {
-    const currentModel = context.globalState.get(
-      'currentModel'
+    const selectedModel = context.globalState.get(
+      'selectedModel'
     ) as ModelResponse;
 
     // Store conversation history in the context.globalState
@@ -23,7 +23,7 @@ export async function handleChatMessage(
     conversationHistory.push({ role: 'user', content: message.text });
 
     const responseStream = await ollamaClient.chat({
-      model: currentModel.name,
+      model: selectedModel.name,
       messages: conversationHistory,
       stream: true,
     });

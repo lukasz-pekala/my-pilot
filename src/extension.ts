@@ -67,7 +67,7 @@ export function updateContextWithModelsList(
   }
 
   context.globalState.update('modelsList', modelsList);
-  context.globalState.update('currentModel', modelsList.models[0]);
+  context.globalState.update('selectedModel', modelsList.models[0]);
 
   return true;
 }
