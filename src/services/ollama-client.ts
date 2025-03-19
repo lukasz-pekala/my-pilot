@@ -1,4 +1,4 @@
-import ollama, { ChatRequest, ListResponse } from "ollama";
+import ollama, { ChatRequest, ListResponse } from 'ollama';
 
 export interface OllamaClient {
   list(): Promise<ListResponse>;
