@@ -1,37 +1,31 @@
-import { ModelResponse } from 'ollama';
+import { WebviewCommand } from './commands';
 
 export interface ChatMessage {
-    command: 'chat';
-    text: string;
-    modelName: string;
-    bubbleId: string;
+  command: WebviewCommand.Chat;
+  text: string;
+  modelName: string;
+  bubbleId: string;
 }
 
 export interface ChatResponseMessage {
-    command: 'chatResponse';
-    text: string;
-    bubbleId: string;
-    done?: boolean;
+  command: WebviewCommand.ChatResponse;
+  text: string;
+  bubbleId: string;
+  done?: boolean;
 }
 
 export interface ChangeModelMessage {
-    command: 'changeModel';
-    modelName: string;
-}
-
-export interface ModelChangedMessage {
-    command: 'modelChanged';
-    model: ModelResponse;
+  command: WebviewCommand.ChangeModel;
+  modelName: string;
 }
 
 export interface ErrorMessage {
-    command: 'error';
-    text: string;
+  command: WebviewCommand.Error;
+  text: string;
 }
 
-export type WebviewMessage = 
-    | ChatMessage 
-    | ChatResponseMessage 
-    | ChangeModelMessage 
-    | ModelChangedMessage 
-    | ErrorMessage;
+export type WebviewMessage =
+  | ChatMessage
+  | ChatResponseMessage
+  | ChangeModelMessage
+  | ErrorMessage;
