@@ -20,7 +20,6 @@ export function createPanel(
     chatHistory: [],
   });
 
-
   if (state.currentPanel?.title && state.isWebviewActive) {
     state.currentPanel.reveal(column);
     return state.currentPanel;
