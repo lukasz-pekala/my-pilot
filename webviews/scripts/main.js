@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 // Acquire vscode API
 const vscode = acquireVsCodeApi();
 
@@ -136,12 +138,12 @@ function createChatBubble(content, isUser, modelName) {
   const usernameSpan = document.createElement("span");
   usernameSpan.className = "username";
   usernameSpan.textContent = isUser ? "User" : modelName;
-
   header.appendChild(usernameSpan);
 
   const messageBubble = document.createElement("div");
   messageBubble.className = "message-bubble";
-  messageBubble.innerHTML = marked.parse(content);
+  // Sanitize HTML to prevent XSS
+  messageBubble.innerHTML = DOMPurify.sanitize(marked.parse(content));
 
   // Add copy buttons to code blocks with codicon
   messageBubble.querySelectorAll("pre").forEach((pre) => {
@@ -187,7 +189,9 @@ function addCopyButtonsToCodeBlocks(container) {
 }
 
 function updateMessageBubble(bubble, text) {
-  bubble.innerHTML = marked.parse(text);
+  // Sanitize HTML to prevent XSS
+  const sanitizedHTML = DOMPurify.sanitize(marked.parse(text));
+  bubble.innerHTML = sanitizedHTML;
   addCopyButtonsToCodeBlocks(bubble);
   bubble.querySelectorAll("pre code").forEach((block) => {
     hljs.highlightElement(block);

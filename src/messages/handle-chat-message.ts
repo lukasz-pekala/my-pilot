@@ -73,7 +73,6 @@ export async function handleChatMessage(
     );
     console.error('Chat message handling error:', error);
   }
-  }
 }
 
 function postChatResponseToWebView(
