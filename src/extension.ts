@@ -21,32 +21,37 @@ export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
     'mypilot.openmypilot',
     async () => {
-      try {
-        // Show progress during initialization
-        await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Initializing My Pilot...',
-            cancellable: false,
-          },
-          async () => {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Initializing My Pilot...',
+          cancellable: false,
+        },
+        async () => {
+          try {
             const modelsList = await ollamaClient.list();
-            const initialized = updateContextWithModelsList(
-              context,
-              modelsList
-            );
+            const initialized = updateContextWithModelsList(context, modelsList);
 
             if (initialized) {
               const panel = createPanel(context);
               setupMessageHandlers(panel, context, ollamaClient);
             }
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+              vscode.window.showErrorMessage(
+                'Could not connect to Ollama. Please ensure Ollama is running and try again.'
+              );
+            } else {
+              vscode.window.showErrorMessage(
+                `Failed to retrieve models: ${
+                  error instanceof Error ? error.message : String(error)
+                }`
+              );
+            }
+            return false;
           }
-        );
-      } catch (error) {
-        vscode.window.showErrorMessage(
-          `Failed to initialize My Pilot: ${error}`
-        );
-      }
+        }
+      );
     }
   );
 
@@ -56,34 +61,43 @@ export function activate(context: vscode.ExtensionContext) {
 // This method is called when your extension is deactivated
 export function deactivate() {}
 
-// todo: consider moving to utils??
+// TODO: Consider moving this function to a utils file (e.g., src/utils/model-manager.ts)
 export function updateContextWithModelsList(
   context: vscode.ExtensionContext,
   modelsList: ListResponse
 ) {
-  if (modelsList.models.length === 0) {
+  // Validate the model list structure and content
+  if (!modelsList || !Array.isArray(modelsList.models) || modelsList.models.length === 0) {
     vscode.window.showErrorMessage(
       'No models found. Extension will not be activated. Please install at least one model using Ollama.'
     );
     return false;
   }
 
-  context.globalState.update('modelsList', modelsList);
-  const previousModel =
-    context.globalState.get<ExtensionState['selectedModel']>('selectedModel');
+  // Validate that each model has the required properties
+  for (const model of modelsList.models) {
+    if (!model.name) {
+      vscode.window.showErrorMessage(
+        'Invalid model data received. Please reinstall your models or check Ollama installation.'
+      );
+      return false;
+    }
+  }
 
-  // Try to restore the previously selected model if it still exists const previousModel = context.globalState.get('selectedModel');
+  context.globalState.update('modelsList', modelsList);
+  const previousModel = context.globalState.get<ExtensionState['selectedModel']>('selectedModel');
+
+  // Try to restore previously selected model if still available
   if (previousModel) {
     const modelStillExists = modelsList.models.some(
       (model) => model.name === previousModel.name
     );
     if (modelStillExists) {
-      // Keep the previously selected model
       return true;
     }
   }
 
-  // Otherwise default to the first model
+  // Otherwise default to the first model available
   context.globalState.update('selectedModel', modelsList.models[0]);
 
   return true;
