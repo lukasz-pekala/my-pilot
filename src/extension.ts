@@ -30,14 +30,20 @@ export function activate(context: vscode.ExtensionContext) {
         async () => {
           try {
             const modelsList = await ollamaClient.list();
-            const initialized = updateContextWithModelsList(context, modelsList);
+            const initialized = updateContextWithModelsList(
+              context,
+              modelsList
+            );
 
             if (initialized) {
               const panel = createPanel(context);
               setupMessageHandlers(panel, context, ollamaClient);
             }
           } catch (error) {
-            if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+            if (
+              error instanceof Error &&
+              error.message.includes('ECONNREFUSED')
+            ) {
               vscode.window.showErrorMessage(
                 'Could not connect to Ollama. Please ensure Ollama is running and try again.'
               );
@@ -67,7 +73,11 @@ export function updateContextWithModelsList(
   modelsList: ListResponse
 ) {
   // Validate the model list structure and content
-  if (!modelsList || !Array.isArray(modelsList.models) || modelsList.models.length === 0) {
+  if (
+    !modelsList ||
+    !Array.isArray(modelsList.models) ||
+    modelsList.models.length === 0
+  ) {
     vscode.window.showErrorMessage(
       'No models found. Extension will not be activated. Please install at least one model using Ollama.'
     );
@@ -85,7 +95,8 @@ export function updateContextWithModelsList(
   }
 
   context.globalState.update('modelsList', modelsList);
-  const previousModel = context.globalState.get<ExtensionState['selectedModel']>('selectedModel');
+  const previousModel =
+    context.globalState.get<ExtensionState['selectedModel']>('selectedModel');
 
   // Try to restore previously selected model if still available
   if (previousModel) {
